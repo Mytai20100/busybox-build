@@ -1,5 +1,4 @@
 name: Build BusyBox 
-
 on:
   push:
     branches:
@@ -11,19 +10,56 @@ jobs:
   build:
     name: Build Static BusyBox (${{ matrix.arch }})
     runs-on: ubuntu-latest
-
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: x86_64
             cross_compile: ""
             cc: gcc
+            extra_config: ""
           - arch: aarch64
             cross_compile: aarch64-linux-gnu-
             cc: aarch64-linux-gnu-gcc
+            extra_config: |
+              CONFIG_SHA1_HWACCEL=n
+              CONFIG_SHA256_HWACCEL=n
           - arch: armv7
             cross_compile: arm-linux-gnueabihf-
             cc: arm-linux-gnueabihf-gcc
+            extra_config: |
+              CONFIG_SHA1_HWACCEL=n
+              CONFIG_SHA256_HWACCEL=n
+          - arch: armv6
+            cross_compile: arm-linux-gnueabihf-
+            cc: arm-linux-gnueabihf-gcc
+            extra_config: |
+              CONFIG_SHA1_HWACCEL=n
+              CONFIG_SHA256_HWACCEL=n
+          - arch: riscv64
+            cross_compile: riscv64-linux-gnu-
+            cc: riscv64-linux-gnu-gcc
+            extra_config: ""
+          - arch: mips
+            cross_compile: mips-linux-gnu-
+            cc: mips-linux-gnu-gcc
+            extra_config: ""
+          - arch: mipsel
+            cross_compile: mipsel-linux-gnu-
+            cc: mipsel-linux-gnu-gcc
+            extra_config: ""
+          - arch: mips64
+            cross_compile: mips64-linux-gnuabi64-
+            cc: mips64-linux-gnuabi64-gcc
+            extra_config: ""
+          - arch: powerpc64le
+            cross_compile: powerpc64le-linux-gnu-
+            cc: powerpc64le-linux-gnu-gcc
+            extra_config: ""
+          - arch: s390x
+            cross_compile: s390x-linux-gnu-
+            cc: s390x-linux-gnu-gcc
+            extra_config: ""
 
     outputs:
       busybox_version: ${{ steps.get_version.outputs.busybox_version }}
@@ -36,6 +72,12 @@ jobs:
             build-essential \
             gcc-aarch64-linux-gnu \
             gcc-arm-linux-gnueabihf \
+            gcc-riscv64-linux-gnu \
+            gcc-mips-linux-gnu \
+            gcc-mipsel-linux-gnu \
+            gcc-mips64-linux-gnuabi64 \
+            gcc-powerpc64le-linux-gnu \
+            gcc-s390x-linux-gnu \
             wget tar
 
       - name: Get latest BusyBox version
@@ -57,10 +99,19 @@ jobs:
         working-directory: busybox-${{ env.BUSYBOX_VERSION }}
         run: |
           make defconfig
-          echo "CONFIG_STATIC=y" >> .config
-          echo "CONFIG_TC=n" >> .config
-          echo "CONFIG_INETD=n" >> .config
-          make oldconfig
+          cat >> .config << 'EOF'
+          CONFIG_STATIC=y
+          CONFIG_TC=n
+          CONFIG_INETD=n
+          CONFIG_SHA1_HWACCEL=n
+          CONFIG_SHA256_HWACCEL=n
+          CONFIG_PLATFORM_LINUX=y
+          EOF
+          # Append arch-specific overrides
+          if [ -n "${{ matrix.extra_config }}" ]; then
+            echo "${{ matrix.extra_config }}" >> .config
+          fi
+          make oldconfig CROSS_COMPILE=${{ matrix.cross_compile }}
 
       - name: Build
         working-directory: busybox-${{ env.BUSYBOX_VERSION }}
@@ -70,20 +121,22 @@ jobs:
             CC=${{ matrix.cc }} \
             busybox
 
+      - name: Rename binary
+        working-directory: busybox-${{ env.BUSYBOX_VERSION }}
+        run: mv busybox busybox-static-${{ matrix.arch }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: busybox-static-${{ matrix.arch }}
-          path: busybox-${{ env.BUSYBOX_VERSION }}/busybox
+          path: busybox-${{ env.BUSYBOX_VERSION }}/busybox-static-${{ matrix.arch }}
 
   release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: build
-
     permissions:
       contents: write
-
     steps:
       - name: Set version
         run: echo "BUSYBOX_VERSION=${{ needs.build.outputs.busybox_version }}" >> $GITHUB_ENV
@@ -112,10 +165,17 @@ jobs:
           body: |
             Statically compiled BusyBox **v${{ env.BUSYBOX_VERSION }}** for multiple architectures.
 
-            | File | Architecture |
-            |------|-------------|
-            | `busybox-static-x86_64` | x86_64 |
-            | `busybox-static-aarch64` | ARM64 |
-            | `busybox-static-armv7` | ARMv7 |
+            | File | Architecture | Description |
+            |------|-------------|-------------|
+            | `busybox-static-x86_64` | x86_64 | 64-bit Intel/AMD |
+            | `busybox-static-aarch64` | ARM64 | 64-bit ARM (RPi 4/5, servers) |
+            | `busybox-static-armv7` | ARMv7 | 32-bit ARM hard-float (RPi 2/3) |
+            | `busybox-static-armv6` | ARMv6 | 32-bit ARM (RPi 1/Zero) |
+            | `busybox-static-riscv64` | RISC-V 64 | 64-bit RISC-V |
+            | `busybox-static-mips` | MIPS | Big-endian MIPS (routers) |
+            | `busybox-static-mipsel` | MIPSel | Little-endian MIPS |
+            | `busybox-static-mips64` | MIPS64 | 64-bit MIPS |
+            | `busybox-static-powerpc64le` | PPC64LE | PowerPC 64-bit LE (IBM POWER) |
+            | `busybox-static-s390x` | s390x | IBM Z mainframe |
           files: artifacts/*
           generate_release_notes: false
