@@ -122,14 +122,14 @@ jobs:
       - name: Rename & verify binary
         working-directory: busybox-${{ env.BUSYBOX_VERSION }}
         run: |
-          mv busybox busybox-static-${{ matrix.arch }}
-          file busybox-static-${{ matrix.arch }}
+          mv busybox busybox-${{ matrix.arch }}
+          file busybox-${{ matrix.arch }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: busybox-static-${{ matrix.arch }}
-          path: busybox-${{ env.BUSYBOX_VERSION }}/busybox-static-${{ matrix.arch }}
+          name: busybox-${{ matrix.arch }}
+          path: busybox-${{ env.BUSYBOX_VERSION }}/busybox-${{ matrix.arch }}
 
   release:
     name: Create Release
@@ -167,15 +167,15 @@ jobs:
 
             | File | Architecture | Description |
             |------|-------------|-------------|
-            | `busybox-static-x86_64`     | x86_64    | 64-bit Intel/AMD |
-            | `busybox-static-aarch64`    | ARM64     | 64-bit ARM (RPi 4/5, servers) |
-            | `busybox-static-armv7`      | ARMv7     | 32-bit ARM hard-float (RPi 2/3) |
-            | `busybox-static-armv6`      | ARMv6     | 32-bit ARM (RPi 1/Zero) |
-            | `busybox-static-riscv64`    | RISC-V 64 | 64-bit RISC-V |
-            | `busybox-static-mips`       | MIPS      | Big-endian MIPS (routers) |
-            | `busybox-static-mipsel`     | MIPSel    | Little-endian MIPS |
-            | `busybox-static-mips64`     | MIPS64    | 64-bit MIPS |
-            | `busybox-static-powerpc64le`| PPC64LE   | PowerPC 64-bit LE (IBM POWER) |
-            | `busybox-static-s390x`      | s390x     | IBM Z mainframe |
+            | `busybox-x86_64`     | x86_64    | 64-bit Intel/AMD |
+            | `busybox-aarch64`    | ARM64     | 64-bit ARM (RPi 4/5, servers) |
+            | `busybox-armv7`      | ARMv7     | 32-bit ARM hard-float (RPi 2/3) |
+            | `busybox-armv6`      | ARMv6     | 32-bit ARM (RPi 1/Zero) |
+            | `busybox-riscv64`    | RISC-V 64 | 64-bit RISC-V |
+            | `busybox-mips`       | MIPS      | Big-endian MIPS (routers) |
+            | `busybox-mipsel`     | MIPSel    | Little-endian MIPS |
+            | `busybox-mips64`     | MIPS64    | 64-bit MIPS |
+            | `busybox-powerpc64le`| PPC64LE   | PowerPC 64-bit LE (IBM POWER) |
+            | `busybox-s390x`      | s390x     | IBM Z mainframe |
           files: artifacts/*
           generate_release_notes: false
