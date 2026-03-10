@@ -1,2 +1,3 @@
 # busybox-build
-Github workflow build static busybox
+Prebuilt static BusyBox binaries for multiple architectures.
+Automatically built using GitHub Actions.
